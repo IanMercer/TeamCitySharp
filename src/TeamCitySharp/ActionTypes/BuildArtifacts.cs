@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Xml;
-
 using TeamCitySharp.Connection;
 
 namespace TeamCitySharp.ActionTypes
@@ -40,29 +40,29 @@ namespace TeamCitySharp.ActionTypes
             _buildConfigId = buildConfigId;
         }
 
-        public ArtifactCollection LastFinished()
+        public async Task<ArtifactCollection> LastFinished()
         {
-            return Specification(".lastFinished");
+            return await Specification(".lastFinished");
         }
 
-        public ArtifactCollection LastPinned()
+        public async Task<ArtifactCollection> LastPinned()
         {
-            return Specification(".lastPinned");
+            return await Specification(".lastPinned");
         }
 
-        public ArtifactCollection LastSuccessful()
+        public async Task<ArtifactCollection> LastSuccessful()
         {
-            return Specification(".lastSuccessful");
+            return await Specification(".lastSuccessful");
         }
 
-        public ArtifactCollection Tag(string tag)
+        public async Task<ArtifactCollection> Tag(string tag)
         {
-            return Specification(tag + ".tcbuildtag");
+            return await Specification(tag + ".tcbuildtag");
         }
 
-        public ArtifactCollection Specification(string buildSpecification)
+        public async Task<ArtifactCollection> Specification(string buildSpecification)
         {
-            var xml = _caller.GetRaw(string.Format("/repository/download/{0}/{1}/teamcity-ivy.xml", _buildConfigId, buildSpecification));
+            var xml = await _caller.GetRaw(string.Format("/repository/download/{0}/{1}/teamcity-ivy.xml", _buildConfigId, buildSpecification));
 
             var document = new XmlDocument();
             document.LoadXml(xml);
@@ -136,7 +136,7 @@ namespace TeamCitySharp.ActionTypes
                     : string.Join(Path.DirectorySeparatorChar.ToString(), parts);
                 destination = Path.Combine(directory, destination);
 
-                // create directories that doesnt exist
+                // create directories that do not exist
                 var directoryName = Path.GetDirectoryName(destination);
                 if (directoryName != null && !Directory.Exists(directoryName))
                 {

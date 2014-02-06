@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net;
 using NUnit.Framework;
 using TeamCitySharp.Locators;
+using System.Net.Http;
 
 namespace TeamCitySharp.IntegrationTests
 {
@@ -28,32 +29,26 @@ namespace TeamCitySharp.IntegrationTests
         }
 
         [Test]
-        [ExpectedException(typeof(WebException))]
         public void it_throws_exception_when_host_does_not_exist()
         {
             var client = new TeamCityClient("test:81");
             client.Connect("teamcitysharpuser", "qwerty");
 
-            var builds = client.BuildConfigs.All();
-
-            //Assert: Exception
+            Assert.That(async () => await client.BuildConfigs.All(), Throws.Exception.TypeOf<HttpRequestException>());
         }
 
         [Test]
-        [ExpectedException(typeof(ArgumentException))]
         public void it_throws_exception_when_no_connection_formed()
         {
             var client = new TeamCityClient("teamcity.codebetter.com");
 
-            var builds = client.BuildConfigs.All();
-
-            //Assert: Exception
+            Assert.That(async () => await client.BuildConfigs.All(), Throws.Exception.TypeOf<HttpRequestException>());
         }
 
         [Test]
         public void it_returns_all_build_types()
         {
-            var buildConfigs = _client.BuildConfigs.All();
+            var buildConfigs = _client.BuildConfigs.All().Result;
 
             Assert.That(buildConfigs.Any(), "No build types were found in this server");
         }
@@ -73,7 +68,7 @@ namespace TeamCitySharp.IntegrationTests
             string buildConfigId = "bt437";
             var buildLocator = BuildTypeLocator.WithId(buildConfigId);
             _client.BuildConfigs.SetConfigurationPauseStatus(buildLocator, true);
-            var status = _client.BuildConfigs.GetConfigurationPauseStatus(buildLocator);
+            var status = _client.BuildConfigs.GetConfigurationPauseStatus(buildLocator).Result;
             Assert.That(status == true, "Build not paused");
         }
 
@@ -83,7 +78,7 @@ namespace TeamCitySharp.IntegrationTests
             string buildConfigId = "bt437";
             var buildLocator = BuildTypeLocator.WithId(buildConfigId);
             _client.BuildConfigs.SetConfigurationPauseStatus(buildLocator, false);
-            var status = _client.BuildConfigs.GetConfigurationPauseStatus(buildLocator);
+            var status = _client.BuildConfigs.GetConfigurationPauseStatus(buildLocator).Result;
             Assert.That(status == false, "Build not unpaused");
         }
 
@@ -100,7 +95,7 @@ namespace TeamCitySharp.IntegrationTests
         public void it_returns_build_configs_by_project_id()
         {
             string projectId = "project137";
-            var buildConfigs = _client.BuildConfigs.ByProjectId(projectId);
+            var buildConfigs = _client.BuildConfigs.ByProjectId(projectId).Result;
 
             Assert.That(buildConfigs.Any(), "Cannot find a build type for that projectId");
         }
@@ -109,7 +104,7 @@ namespace TeamCitySharp.IntegrationTests
         public void it_returns_build_configs_by_project_name()
         {
             string projectName = "YouTrackSharp";
-            var buildConfigs = _client.BuildConfigs.ByProjectName(projectName);
+            var buildConfigs = _client.BuildConfigs.ByProjectName(projectName).Result;
 
             Assert.That(buildConfigs.Any(), "Cannot find a build type for that projectName");
         }

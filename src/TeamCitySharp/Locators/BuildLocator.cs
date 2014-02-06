@@ -38,7 +38,7 @@ namespace TeamCitySharp.Locators
                                                   int? maxResults = null,
                                                   int? startIndex = null,
                                                   BuildLocator sinceBuild = null,
-                                                  DateTime? sinceDate = null,
+                                                  DateTimeOffset? sinceDate = null,
                                                   string[] tags = null,
                                                   string branch = null
             )
@@ -76,7 +76,7 @@ namespace TeamCitySharp.Locators
         public bool? Pinned { get; private set; }
         public int? MaxResults { get; private set; }
         public int? StartIndex { get; private set; }
-        public DateTime? SinceDate { get; private set; }
+        public DateTimeOffset? SinceDate { get; private set; }
         public string Branch { get; private set; }
 
         public override string ToString()

@@ -10,7 +10,7 @@ namespace TeamCitySharp.DomainEntities
         public string Name { get; set; }
         public string Version { get; set; }
         public string Status { get; set; }
-        public DateTime lastChecked { get; set; }
+        public DateTimeOffset lastChecked { get; set; }
 
         public override string ToString()
         {

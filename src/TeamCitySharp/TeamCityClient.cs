@@ -1,4 +1,5 @@
-﻿using TeamCitySharp.ActionTypes;
+﻿using System.Threading.Tasks;
+using TeamCitySharp.ActionTypes;
 using TeamCitySharp.Connection;
 
 namespace TeamCitySharp
@@ -31,9 +32,9 @@ namespace TeamCitySharp
             _caller.Connect(string.Empty, string.Empty, true);
         }
 
-        public bool Authenticate()
+        public async Task<bool> Authenticate()
         {
-            return _caller.Authenticate("/app/rest");
+            return await _caller.Authenticate("/app/rest");
         }
 
         public IBuilds Builds

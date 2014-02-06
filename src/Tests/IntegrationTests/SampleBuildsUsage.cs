@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net;
 using NUnit.Framework;
 using TeamCitySharp.Locators;
+using System.Net.Http;
 
 namespace TeamCitySharp.IntegrationTests
 {
@@ -28,35 +29,31 @@ namespace TeamCitySharp.IntegrationTests
         }
 
         [Test]
-        [ExpectedException(typeof(WebException))]
         public void it_throws_exception_when_host_does_not_exist()
         {
             var client = new TeamCityClient("test:81");
             client.Connect("admin", "qwerty");
-
             const string buildConfigId = "Release Build";
-            client.Builds.SuccessfulBuildsByBuildConfigId(buildConfigId);
 
-            //Assert: Exception
+            Assert.That(async () => await _client.Builds.SuccessfulBuildsByBuildConfigId(buildConfigId),
+                Throws.Exception.TypeOf<HttpRequestException>());
         }
 
         [Test]
-        [ExpectedException(typeof(ArgumentException))]
         public void it_throws_exception_when_no_connection_formed()
         {
             var client = new TeamCityClient("teamcity.codebetter.com");
 
             const string buildConfigId = "Release Build";
-            client.Builds.SuccessfulBuildsByBuildConfigId(buildConfigId);
 
-            //Assert: Exception
+            Assert.That(async () => await _client.Builds.SuccessfulBuildsByBuildConfigId(buildConfigId), Throws.Exception.TypeOf<HttpRequestException>());
         }
 
         [Test]
         public void it_returns_last_successful_build_by_build_config_id()
         {
             const string buildConfigId = "bt437";
-            var build = _client.Builds.LastSuccessfulBuildByBuildConfigId(buildConfigId);
+            var build = _client.Builds.LastSuccessfulBuildByBuildConfigId(buildConfigId).Result;
 
             Assert.That(build != null, "No successful builds have been found");
         }
@@ -65,7 +62,7 @@ namespace TeamCitySharp.IntegrationTests
         public void it_returns_last_successful_builds_by_build_config_id()
         {
             const string buildConfigId = "bt437";
-            var buildDetails = _client.Builds.SuccessfulBuildsByBuildConfigId(buildConfigId);
+            var buildDetails = _client.Builds.SuccessfulBuildsByBuildConfigId(buildConfigId).Result;
 
             Assert.That(buildDetails.Any(), "No successful builds have been found");
         }
@@ -74,7 +71,7 @@ namespace TeamCitySharp.IntegrationTests
         public void it_returns_last_failed_build_by_build_config_id()
         {
             const string buildConfigId = "bt437";
-            var buildDetails = _client.Builds.LastFailedBuildByBuildConfigId(buildConfigId);
+            var buildDetails = _client.Builds.LastFailedBuildByBuildConfigId(buildConfigId).Result;
 
             Assert.That(buildDetails != null, "No failed builds have been found");
         }
@@ -83,7 +80,7 @@ namespace TeamCitySharp.IntegrationTests
         public void it_returns_all_non_successful_builds_by_config_id()
         {
             const string buildConfigId = "bt437";
-            var builds = _client.Builds.FailedBuildsByBuildConfigId(buildConfigId);
+            var builds = _client.Builds.FailedBuildsByBuildConfigId(buildConfigId).Result;
 
             Assert.That(builds.Any(), "No failed builds have been found");
         }
@@ -92,25 +89,25 @@ namespace TeamCitySharp.IntegrationTests
         public void it_returns_last_error_build_by_config_id()
         {
             const string buildConfigId = "bt437";
-            var buildDetails = _client.Builds.LastErrorBuildByBuildConfigId(buildConfigId);
+            var buildDetails = _client.Builds.LastErrorBuildByBuildConfigId(buildConfigId).Result;
 
-            Assert.That(buildDetails != null, "No errored builds have been found");
+            Assert.That(buildDetails == null, "Expected no errored builds");
         }
 
         [Test]
         public void it_returns_all_error_builds_by_config_id()
         {
             const string buildId = "bt437";
-            var builds = _client.Builds.ErrorBuildsByBuildConfigId(buildId);
+            var builds = _client.Builds.ErrorBuildsByBuildConfigId(buildId).Result;
 
-            Assert.That(builds.Any(), "No errored builds have been found");
+            Assert.That(!builds.Any(), "No errored builds expected");
         }
 
         [Test]
         public void it_returns_the_last_build_status_by_build_config_id()
         {
             const string buildConfigId = "bt437";
-            var build = _client.Builds.LastBuildByBuildConfigId(buildConfigId);
+            var build = _client.Builds.LastBuildByBuildConfigId(buildConfigId).Result;
 
             Assert.That(build != null, "No builds for this build config have been found");
         }
@@ -119,7 +116,7 @@ namespace TeamCitySharp.IntegrationTests
         public void it_returns_all_builds_by_build_config_id()
         {
             const string buildConfigId = "bt437";
-            var builds = _client.Builds.ByBuildConfigId(buildConfigId);
+            var builds = _client.Builds.ByBuildConfigId(buildConfigId).Result;
 
             Assert.That(builds.Any(), "No builds for this build configuration have been found");
         }
@@ -129,7 +126,7 @@ namespace TeamCitySharp.IntegrationTests
         {
             const string buildConfigId = "bt437";
             const string tag = "Release";
-            var builds = _client.Builds.ByConfigIdAndTag(buildConfigId, tag);
+            var builds = _client.Builds.ByConfigIdAndTag(buildConfigId, tag).Result;
 
             Assert.IsNotNull(builds, "No builds were found for this build id and Tag");
         }
@@ -138,7 +135,7 @@ namespace TeamCitySharp.IntegrationTests
         public void it_returns_all_builds_by_username()
         {
             const string userName = "teamcitysharpuser";
-            var builds = _client.Builds.ByUserName(userName);
+            var builds = _client.Builds.ByUserName(userName).Result;
 
             Assert.IsNotNull(builds, "No builds for this user have been found");
         }
@@ -147,7 +144,7 @@ namespace TeamCitySharp.IntegrationTests
         public void it_returns_all_non_successful_builds_by_username()
         {
             const string userName = "teamcitysharpuser";
-            var builds = _client.Builds.NonSuccessfulBuildsForUser(userName);
+            var builds = _client.Builds.NonSuccessfulBuildsForUser(userName).Result;
 
             Assert.IsNotNull(builds, "No non successful builds found for this user");
         }
@@ -156,7 +153,7 @@ namespace TeamCitySharp.IntegrationTests
         public void it_returns_all_non_successful_build_count_by_username()
         {
             const string userName = "teamcitysharpuser";
-            var builds = _client.Builds.NonSuccessfulBuildsForUser(userName);
+            var builds = _client.Builds.NonSuccessfulBuildsForUser(userName).Result;
 
             Assert.IsNotNull(builds, "No non successful builds found for this user");
         }
@@ -164,7 +161,7 @@ namespace TeamCitySharp.IntegrationTests
         [Test]
         public void it_returns_all_running_builds()
         {
-            var builds = _client.Builds.ByBuildLocator(BuildLocator.RunningBuilds());
+            var builds = _client.Builds.ByBuildLocator(BuildLocator.RunningBuilds()).Result;
 
             Assert.IsNotNull(builds, "There are currently no running builds");
         }
@@ -172,7 +169,7 @@ namespace TeamCitySharp.IntegrationTests
         [Test]
         public void it_returns_all_successful_builds_since_date()
         {
-            var builds = _client.Builds.AllBuildsOfStatusSinceDate(DateTime.Now.AddDays(-2), BuildStatus.FAILURE);
+            var builds = _client.Builds.AllBuildsOfStatusSinceDate(DateTime.Now.AddDays(-2), BuildStatus.FAILURE).Result;
 
             Assert.IsNotNull(builds);
         }
@@ -186,7 +183,7 @@ namespace TeamCitySharp.IntegrationTests
 
             var build =
                 client.Builds.ByBuildLocator(BuildLocator.WithDimensions(BuildTypeLocator.WithId(buildConfigId),
-                                                                         maxResults: 1));
+                                                                         maxResults: 1)).Result;
             Assert.That(build.Count == 1);
             Assert.IsNull(build[0].StatusText);
         }

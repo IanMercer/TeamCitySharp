@@ -21,7 +21,7 @@ namespace TeamCitySharp.IntegrationTests
 
         [Test]
         [ExpectedException(typeof(ArgumentNullException))]
-        public void it_returns_exception_when_no_host_specified()
+        public void it_throws_exception_when_no_host_specified()
         {
             var client = new TeamCityClient(null);
 
@@ -29,32 +29,26 @@ namespace TeamCitySharp.IntegrationTests
         }
 
         [Test]
-        [ExpectedException(typeof(WebException))]
-        public void it_returns_exception_when_host_does_not_exist()
+        public void it_throws_exception_when_host_does_not_exist()
         {
             var client = new TeamCityClient("test:81");
             client.Connect("admin", "qwerty");
 
-            var changes = client.Changes.All();
-
-            //Assert: Exception
+            Assert.That(async () => await _client.Changes.All(), Throws.Exception.TypeOf<WebException>());
         }
 
         [Test]
-        [ExpectedException(typeof(ArgumentException))]
-        public void it_returns_exception_when_no_connection_made()
+        public void it_throws_exception_when_no_connection_made()
         {
             var client = new TeamCityClient("teamcity.codebetter.com");
 
-            var changes = client.Changes.All();
-
-            //Assert: Exception
+            Assert.That(async () => await _client.Changes.All(), Throws.Exception.TypeOf<ArgumentException>());
         }
 
         [Test]
         public void it_returns_all_changes()
         {
-            List<Change> changes = _client.Changes.All();
+            List<Change> changes = _client.Changes.All().Result;
 
             Assert.That(changes.Any(), "Cannot find any changes recorded in any of the projects");
         }
@@ -62,7 +56,7 @@ namespace TeamCitySharp.IntegrationTests
         [TestCase("42843")]
         public void it_returns_change_details_by_change_id(string changeId)
         {
-            Change changeDetails = _client.Changes.ByChangeId(changeId);
+            Change changeDetails = _client.Changes.ByChangeId(changeId).Result;
 
             Assert.That(changeDetails != null, "Cannot find details of that specified change");
         }
@@ -70,7 +64,7 @@ namespace TeamCitySharp.IntegrationTests
         [TestCase("bt113")]
         public void it_returns_change_details_for_build_config(string buildConfigId)
         {
-            Change changeDetails = _client.Changes.LastChangeDetailByBuildConfigId(buildConfigId);
+            Change changeDetails = _client.Changes.LastChangeDetailByBuildConfigId(buildConfigId).Result;
 
             Assert.That(changeDetails != null, "Cannot find details of that specified change");
         }

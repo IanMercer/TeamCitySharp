@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using TeamCitySharp.Connection;
 using TeamCitySharp.DomainEntities;
 
@@ -13,10 +14,9 @@ namespace TeamCitySharp.ActionTypes
             _caller = caller;
         }
 
-        public List<Agent> All()
+        public async Task<List<Agent>> All()
         {
-            var agentWrapper = _caller.Get<AgentWrapper>("/app/rest/agents");
-
+            var agentWrapper = await _caller.Get<AgentWrapper>("/app/rest/agents");
             return agentWrapper.Agent;
         }
     }

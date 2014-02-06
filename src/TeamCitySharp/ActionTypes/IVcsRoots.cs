@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using TeamCitySharp.DomainEntities;
 using TeamCitySharp.Locators;
 
@@ -6,10 +7,10 @@ namespace TeamCitySharp.ActionTypes
 {
     public interface IVcsRoots
     {
-        List<VcsRoot> All();
-        VcsRoot ById(string vcsRootId);
-        VcsRoot AttachVcsRoot(BuildTypeLocator locator, VcsRoot vcsRoot);
+        Task<List<VcsRoot>> All();
+        Task<VcsRoot> ById(string vcsRootId);
+        Task<VcsRoot> AttachVcsRoot(BuildTypeLocator locator, VcsRoot vcsRoot);
         void DetachVcsRoot(BuildTypeLocator locator, string vcsRootId);
-        void SetVcsRootField(VcsRoot vcsRoot, VcsRootField field, object value);
+        void SetVcsRootField<U>(VcsRoot vcsRoot, VcsRootField field, U value);
     }
 }

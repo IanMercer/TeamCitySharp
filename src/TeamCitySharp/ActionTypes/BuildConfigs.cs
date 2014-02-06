@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Mime;
+using System.Threading.Tasks;
 using System.Xml;
-using EasyHttp.Http;
 using TeamCitySharp.Connection;
 using TeamCitySharp.DomainEntities;
 using TeamCitySharp.Locators;
@@ -19,104 +19,101 @@ namespace TeamCitySharp.ActionTypes
             _caller = caller;
         }
 
-        public List<BuildConfig> All()
+        public async Task<List<BuildConfig>> All()
         {
-            var buildType = _caller.Get<BuildTypeWrapper>("/app/rest/buildTypes");
-
+            var buildType = await _caller.Get<BuildTypeWrapper>("/app/rest/buildTypes");
             return buildType.BuildType;
         }
 
-        public BuildConfig ByConfigurationName(string buildConfigName)
+        public async Task<BuildConfig> ByConfigurationName(string buildConfigName)
         {
-            var build = _caller.GetFormat<BuildConfig>("/app/rest/buildTypes/name:{0}", buildConfigName);
-
+            var build = await _caller.GetFormat<BuildConfig>("/app/rest/buildTypes/name:{0}", buildConfigName);
             return build;
         }
 
-        public BuildConfig ByConfigurationId(string buildConfigId)
+        public async Task<BuildConfig> ByConfigurationId(string buildConfigId)
         {
-            var build = _caller.GetFormat<BuildConfig>("/app/rest/buildTypes/id:{0}", buildConfigId);
-
+            var build = await _caller.GetFormat<BuildConfig>("/app/rest/buildTypes/id:{0}", buildConfigId);
             return build;
         }
 
-        public BuildConfig ByProjectNameAndConfigurationName(string projectName, string buildConfigName)
+        public async Task<BuildConfig> ByProjectNameAndConfigurationName(string projectName, string buildConfigName)
         {
-            var build = _caller.Get<BuildConfig>(string.Format("/app/rest/projects/name:{0}/buildTypes/name:{1}", projectName, buildConfigName));
+            var build = await _caller.Get<BuildConfig>(string.Format("/app/rest/projects/name:{0}/buildTypes/name:{1}", projectName, buildConfigName));
             return build;
         }
 
-        public BuildConfig ByProjectNameAndConfigurationId(string projectName, string buildConfigId)
+        public async Task<BuildConfig> ByProjectNameAndConfigurationId(string projectName, string buildConfigId)
         {
-            var build = _caller.Get<BuildConfig>(string.Format("/app/rest/projects/name:{0}/buildTypes/id:{1}", projectName, buildConfigId));
+            var build = await _caller.Get<BuildConfig>(string.Format("/app/rest/projects/name:{0}/buildTypes/id:{1}", projectName, buildConfigId));
             return build;
         }
 
-        public BuildConfig ByProjectIdAndConfigurationName(string projectId, string buildConfigName)
+        public async Task<BuildConfig> ByProjectIdAndConfigurationName(string projectId, string buildConfigName)
         {
-            var build = _caller.Get<BuildConfig>(string.Format("/app/rest/projects/id:{0}/buildTypes/name:{1}", projectId, buildConfigName));
+            var build = await _caller.Get<BuildConfig>(string.Format("/app/rest/projects/id:{0}/buildTypes/name:{1}", projectId, buildConfigName));
             return build;
         }
 
-        public BuildConfig ByProjectIdAndConfigurationId(string projectId, string buildConfigId)
+        public async Task<BuildConfig> ByProjectIdAndConfigurationId(string projectId, string buildConfigId)
         {
-            var build = _caller.Get<BuildConfig>(string.Format("/app/rest/projects/id:{0}/buildTypes/id:{1}", projectId, buildConfigId));
+            var build = await _caller.Get<BuildConfig>(string.Format("/app/rest/projects/id:{0}/buildTypes/id:{1}", projectId, buildConfigId));
             return build;
         }
 
-        public List<BuildConfig> ByProjectId(string projectId)
+        public async Task<List<BuildConfig>> ByProjectId(string projectId)
         {
-            var buildWrapper = _caller.GetFormat<BuildTypeWrapper>("/app/rest/projects/id:{0}/buildTypes", projectId);
+            var buildWrapper = await _caller.GetFormat<BuildTypeWrapper>("/app/rest/projects/id:{0}/buildTypes", projectId);
+            if (buildWrapper == null || buildWrapper.BuildType == null) return new List<BuildConfig>();
+            return buildWrapper.BuildType;
+        }
+
+        public async Task<List<BuildConfig>> ByProjectName(string projectName)
+        {
+            var buildWrapper = await _caller.GetFormat<BuildTypeWrapper>("/app/rest/projects/name:{0}/buildTypes", projectName);
 
             if (buildWrapper == null || buildWrapper.BuildType == null) return new List<BuildConfig>();
             return buildWrapper.BuildType;
         }
 
-        public List<BuildConfig> ByProjectName(string projectName)
+        public async Task<BuildConfig> CreateConfiguration(string projectName, string configurationName)
         {
-            var buildWrapper = _caller.GetFormat<BuildTypeWrapper>("/app/rest/projects/name:{0}/buildTypes", projectName);
-
-            if (buildWrapper == null || buildWrapper.BuildType == null) return new List<BuildConfig>();
-            return buildWrapper.BuildType;
-        }
-
-        public BuildConfig CreateConfiguration(string projectName, string configurationName)
-        {
-            return _caller.PostFormat<BuildConfig>(configurationName, HttpContentTypes.TextPlain, HttpContentTypes.ApplicationJson, "/app/rest/projects/name:{0}/buildTypes", projectName);
+            return await _caller.PostFormat<string, BuildConfig>(configurationName, "text/plain", "application/json", "/app/rest/projects/name:{0}/buildTypes", projectName);
         }
 
         public void SetConfigurationSetting(BuildTypeLocator locator, string settingName, string settingValue)
         {
-            _caller.PutFormat(settingValue, HttpContentTypes.TextPlain, "/app/rest/buildTypes/{0}/settings/{1}", locator, settingName);
+            _caller.PutFormat<string, string>(settingValue, "text/plain", "/app/rest/buildTypes/{0}/settings/{1}", locator, settingName);
         }
 
-        public bool GetConfigurationPauseStatus(BuildTypeLocator locator)
+        public async Task<bool> GetConfigurationPauseStatus(BuildTypeLocator locator)
         {
-             return _caller.Get<bool>(string.Format("/app/rest/buildTypes/{0}/paused/", locator.Name));
+             return await _caller.GetFormat<bool>("/app/rest/buildTypes/{0}/paused/", locator);
         }
+
         public void SetConfigurationPauseStatus(BuildTypeLocator locator, bool isPaused)
         {
-            _caller.PutFormat(isPaused, HttpContentTypes.TextPlain, "/app/rest/buildTypes/{0}/paused/", locator);
+            _caller.PutFormat<bool, string>(isPaused, "text/plain", "/app/rest/buildTypes/{0}/paused/", locator);
         }
 
         public void PostRawArtifactDependency(BuildTypeLocator locator, string rawXml)
         {
-            _caller.PostFormat<ArtifactDependency>(rawXml, HttpContentTypes.ApplicationXml, string.Empty, "/app/rest/buildTypes/{0}/artifact-dependencies", locator);
+            _caller.PostFormat<string, ArtifactDependency>(rawXml, "application/xml", string.Empty, "/app/rest/buildTypes/{0}/artifact-dependencies", locator);
         }
 
         public void PostRawBuildStep(BuildTypeLocator locator, string rawXml)
         {
-            _caller.PostFormat<BuildConfig>(rawXml, HttpContentTypes.ApplicationXml, string.Empty, "/app/rest/buildTypes/{0}/steps", locator);
+            _caller.PostFormat<string, BuildConfig>(rawXml, "application/xml", string.Empty, "/app/rest/buildTypes/{0}/steps", locator);
         }
 
         public void PostRawBuildTrigger(BuildTypeLocator locator, string rawXml)
         {
-            _caller.PostFormat(rawXml, HttpContentTypes.ApplicationXml, "/app/rest/buildTypes/{0}/triggers", locator);
+            _caller.PostFormat<string, string>(rawXml, "application/xml", "/app/rest/buildTypes/{0}/triggers", locator);
         }
 
         public void SetConfigurationParameter(BuildTypeLocator locator, string key, string value)
         {
-            _caller.PutFormat(value, HttpContentTypes.TextPlain, "/app/rest/buildTypes/{0}/parameters/{1}", locator, key);
+            _caller.PutFormat<string,string>(value, "text/plain", "/app/rest/buildTypes/{0}/parameters/{1}", locator, key);
         }
 
         public void DeleteConfiguration(BuildTypeLocator locator)
@@ -150,7 +147,7 @@ namespace TeamCitySharp.ActionTypes
                 writer.WriteEndElement();
             }
 
-            _caller.PutFormat(sw.ToString(), HttpContentTypes.ApplicationXml, "/app/rest/buildTypes/{0}/parameters", locator);
+            _caller.PutFormat<string,string>(sw.ToString(), "application/xml", "/app/rest/buildTypes/{0}/parameters", locator);
         }
 
         public void DownloadConfiguration(BuildTypeLocator locator, Action<string> downloadHandler)
@@ -160,7 +157,7 @@ namespace TeamCitySharp.ActionTypes
 
         public void PostRawAgentRequirement(BuildTypeLocator locator, string rawXml)
         {
-            _caller.PostFormat(rawXml, HttpContentTypes.ApplicationXml, "/app/rest/buildTypes/{0}/agent-requirements", locator);
+            _caller.PostFormat<string,string>(rawXml, "application/xml", "/app/rest/buildTypes/{0}/agent-requirements", locator);
         }
 
         public void DeleteBuildStep(BuildTypeLocator locator, string buildStepId)
@@ -190,7 +187,7 @@ namespace TeamCitySharp.ActionTypes
 
         public void SetBuildTypeTemplate(BuildTypeLocator locatorBuildType, BuildTypeLocator locatorTemplate)
         {
-            _caller.PutFormat(locatorTemplate.ToString(), HttpContentTypes.TextPlain, "/app/rest/buildTypes/{0}/template", locatorBuildType);
+            _caller.PutFormat<string,string>(locatorTemplate.ToString(), "text/plain", "/app/rest/buildTypes/{0}/template", locatorBuildType);
         }
 
         public void DeleteSnapshotDependency(BuildTypeLocator locator, string snapshotDependencyId)
@@ -200,13 +197,12 @@ namespace TeamCitySharp.ActionTypes
 
         public void PostRawSnapshotDependency(BuildTypeLocator locator, XmlElement rawXml)
         {
-            _caller.PostFormat(rawXml.OuterXml, HttpContentTypes.ApplicationXml, "/app/rest/buildTypes/{0}/snapshot-dependencies", locator);
+            _caller.PostFormat<string,string>(rawXml.OuterXml, "application/xml", "/app/rest/buildTypes/{0}/snapshot-dependencies", locator);
         }
 
-        public BuildConfig BuildType(BuildTypeLocator locator)
+        public async Task<BuildConfig> BuildType(BuildTypeLocator locator)
         {
-            var build = _caller.GetFormat<BuildConfig>("/app/rest/buildTypes/{0}", locator);
-
+            var build = await _caller.GetFormat<BuildConfig>("/app/rest/buildTypes/{0}", locator);
             return build;
         }
     }

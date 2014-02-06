@@ -1,13 +1,14 @@
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using TeamCitySharp.DomainEntities;
 
 namespace TeamCitySharp.ActionTypes
 {
     public interface IChanges
     {
-        List<Change> All();
-        Change ByChangeId(string id);
-        Change LastChangeDetailByBuildConfigId(string buildConfigId);
-        List<Change> ByBuildConfigId(string buildConfigId);
+        Task<List<Change>> All();
+        Task<Change> ByChangeId(string id);
+        Task<Change> LastChangeDetailByBuildConfigId(string buildConfigId);
+        Task<List<Change>> ByBuildConfigId(string buildConfigId);
     }
 }

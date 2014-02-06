@@ -1,6 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Net;
-using EasyHttp.Http;
+using System.Threading.Tasks;
 using TeamCitySharp.Connection;
 using TeamCitySharp.DomainEntities;
 
@@ -15,89 +16,62 @@ namespace TeamCitySharp.ActionTypes
             _caller = caller;
         }
 
-        public List<User> All()
+        public async Task<List<User>> All()
         {
-            var userWrapper = _caller.Get<UserWrapper>("/app/rest/users");
-
+            var userWrapper = await _caller.Get<UserWrapper>("/app/rest/users");
             return userWrapper.User;
         }
 
-        public List<Role> AllRolesByUserName(string userName)
+        public async Task<List<Role>> AllRolesByUserName(string userName)
         {
-            var user =
-                _caller.GetFormat<User>("/app/rest/users/username:{0}", userName);
-
-            return user.Roles.Role;
+            var user = await _caller.GetFormat<User>("/app/rest/users/username:{0}", userName);
+            return user.Roles == null ? null : user.Roles.Role;
         }
 
-        public User Details(string userName)
+        public async Task<User> Details(string userName)
         {
-            var user = _caller.GetFormat<User>("/app/rest/users/username:{0}", userName);
+            var user = await _caller.GetFormat<User>("/app/rest/users/username:{0}", userName);
 
             return user;
         }
 
-        public List<Group> AllGroupsByUserName(string userName)
+        public async Task<List<Group>> AllGroupsByUserName(string userName)
         {
-            var user =
-                _caller.GetFormat<User>("/app/rest/users/username:{0}", userName);
-
+            var user = await _caller.GetFormat<User>("/app/rest/users/username:{0}", userName);
             return user.Groups.Group;
         }
 
-        public List<Group> AllUserGroups()
+        public async Task<List<Group>> AllUserGroups()
         {
-            var userGroupWrapper = _caller.Get<UserGroupWrapper>("/app/rest/userGroups");
-
+            var userGroupWrapper = await _caller.Get<UserGroupWrapper>("/app/rest/userGroups");
             return userGroupWrapper.Group;
         }
 
-        public List<User> AllUsersByUserGroup(string userGroupName)
+        public async Task<List<User>> AllUsersByUserGroup(string userGroupName)
         {
-            var group = _caller.GetFormat<Group>("/app/rest/userGroups/key:{0}", userGroupName);
-
+            var group = await _caller.GetFormat<Group>("/app/rest/userGroups/key:{0}", userGroupName);
             return group.Users.User;
         }
 
-        public List<Role> AllUserRolesByUserGroup(string userGroupName)
+        public async Task<List<Role>> AllUserRolesByUserGroup(string userGroupName)
         {
-            var group = _caller.GetFormat<Group>("/app/rest/userGroups/key:{0}", userGroupName);
-
+            var group = await _caller.GetFormat<Group>("/app/rest/userGroups/key:{0}", userGroupName);
             return group.Roles.Role;
         }
 
-        public bool Create(string username, string name, string email, string password)
+        public async Task<bool> Create(string username, string name, string email, string password)
         {
-            bool result = false;
-
             string data = string.Format("<user name=\"{0}\" username=\"{1}\" email=\"{2}\" password=\"{3}\"/>", name, username, email, password);
-
-            var createUserResponse = _caller.Post(data, HttpContentTypes.ApplicationXml, "/app/rest/users", string.Empty);
-
+            var createUserResponse = await _caller.Post<string, string>(data, "application/xml", "/app/rest/users");
             // Workaround, Create POST request fails to deserialize password field. See http://youtrack.jetbrains.com/issue/TW-23200
             // Also this does not return an accurate representation of whether it has worked or not
-            AddPassword(username, password);
-
-            if (createUserResponse.StatusCode == HttpStatusCode.OK)
-            {
-                result = true;
-            }
-
-            return result;
+            return await AddPassword(username, password);
         }
 
-        public bool AddPassword(string username, string password)
+        public async Task<bool> AddPassword(string username, string password)
         {
-            bool result = false;
-
-            var response = _caller.Put(password, HttpContentTypes.TextPlain, string.Format("/app/rest/users/username:{0}/password", username), string.Empty);
-
-            if (response.StatusCode == HttpStatusCode.OK)
-            {
-                result = true;
-            }
-
-            return result;
+            var response = await _caller.Put<string, string>(password, "text/plain", string.Format("/app/rest/users/username:{0}/password", username));
+            return true;
         }
 
     }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Xml;
 using TeamCitySharp.DomainEntities;
 using TeamCitySharp.Locators;
@@ -8,19 +9,19 @@ namespace TeamCitySharp.ActionTypes
 {
     public interface IBuildConfigs
     {
-        List<BuildConfig> All();
-        BuildConfig ByConfigurationName(string buildConfigName);
-        BuildConfig ByConfigurationId(string buildConfigId);
-        BuildConfig ByProjectNameAndConfigurationName(string projectName, string buildConfigName);
-        BuildConfig ByProjectNameAndConfigurationId(string projectName, string buildConfigId);
-        BuildConfig ByProjectIdAndConfigurationName(string projectId, string buildConfigName);
-        BuildConfig ByProjectIdAndConfigurationId(string projectId, string buildConfigId);
-        List<BuildConfig> ByProjectId(string projectId);
-        List<BuildConfig> ByProjectName(string projectName);
-        BuildConfig CreateConfiguration(string projectName, string configurationName);
+        Task<List<BuildConfig>> All();
+        Task<BuildConfig> ByConfigurationName(string buildConfigName);
+        Task<BuildConfig> ByConfigurationId(string buildConfigId);
+        Task<BuildConfig> ByProjectNameAndConfigurationName(string projectName, string buildConfigName);
+        Task<BuildConfig> ByProjectNameAndConfigurationId(string projectName, string buildConfigId);
+        Task<BuildConfig> ByProjectIdAndConfigurationName(string projectId, string buildConfigName);
+        Task<BuildConfig> ByProjectIdAndConfigurationId(string projectId, string buildConfigId);
+        Task<List<BuildConfig>> ByProjectId(string projectId);
+        Task<List<BuildConfig>> ByProjectName(string projectName);
+        Task<BuildConfig> CreateConfiguration(string projectName, string configurationName);
 
         void SetConfigurationSetting(BuildTypeLocator locator, string settingName, string settingValue);
-        bool GetConfigurationPauseStatus(BuildTypeLocator locator);
+        Task<bool> GetConfigurationPauseStatus(BuildTypeLocator locator);
         void SetConfigurationPauseStatus(BuildTypeLocator locator, bool isPaused);
         void PostRawArtifactDependency(BuildTypeLocator locator, string rawXml);
         void PostRawBuildStep(BuildTypeLocator locator, string rawXml);
@@ -69,7 +70,7 @@ namespace TeamCitySharp.ActionTypes
         /// </summary>
         /// <param name="locator">Locator for the build type.</param>
         /// <returns>The build type with all its properties.</returns>
-        BuildConfig BuildType(BuildTypeLocator locator);
+        Task<BuildConfig> BuildType(BuildTypeLocator locator);
 
         void DeleteConfiguration(BuildTypeLocator locator);
 

@@ -3,6 +3,7 @@
     using FakeItEasy;
     using FluentAssertions;
     using NUnit.Framework;
+    using System.Threading.Tasks;
     using TeamCitySharp.Connection;
 
     [TestFixture]
@@ -53,9 +54,9 @@
         {
             const string Status = "Idle";
 
-            A.CallTo(() => this.teamCityCaller.GetRaw("/app/rest/server/backup")).Returns(Status);
+            A.CallTo(() => this.teamCityCaller.Get<string>("/app/rest/server/backup")).Returns(Task.FromResult(Status));
 
-            string status = this.testee.GetBackupStatus();
+            string status = this.testee.GetBackupStatus().Result;
 
             status.Should().Be(Status);
         }

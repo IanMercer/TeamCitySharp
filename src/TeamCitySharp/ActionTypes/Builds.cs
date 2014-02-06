@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using TeamCitySharp.Connection;
 using TeamCitySharp.DomainEntities;
 using TeamCitySharp.Locators;
@@ -16,9 +17,9 @@ namespace TeamCitySharp.ActionTypes
             _caller = caller;
         }
 
-        public List<Build> ByBuildLocator(BuildLocator locator)
+        public async Task<List<Build>> ByBuildLocator(BuildLocator locator)
         {
-            var buildWrapper = _caller.GetFormat<BuildWrapper>("/app/rest/builds?locator={0}", locator);
+            var buildWrapper = await _caller.GetFormat<BuildWrapper>("/app/rest/builds?locator={0}", locator);
             if (int.Parse(buildWrapper.Count) > 0)
             {
                 return buildWrapper.Build;
@@ -26,123 +27,107 @@ namespace TeamCitySharp.ActionTypes
             return new List<Build>();
         }
 
-        public Build LastBuildByAgent(string agentName)
+        public async Task<Build> LastBuildByAgent(string agentName)
         {
-            return ByBuildLocator(BuildLocator.WithDimensions(
-                agentName: agentName,
-                maxResults: 1
-                                            )).SingleOrDefault();
+            var builds = await ByBuildLocator(BuildLocator.WithDimensions(agentName: agentName,
+                maxResults: 1));
+            return builds.SingleOrDefault();
         }
 
         public void Add2QueueBuildByBuildConfigId(string buildConfigId)
         {
-            _caller.GetFormat("/action.html?add2Queue={0}", buildConfigId);
+            _caller.GetFormat<string>("/action.html?add2Queue={0}", buildConfigId);
         }
 
-        public List<Build> SuccessfulBuildsByBuildConfigId(string buildConfigId)
+        public Task<List<Build>> SuccessfulBuildsByBuildConfigId(string buildConfigId)
         {
             return ByBuildLocator(BuildLocator.WithDimensions(BuildTypeLocator.WithId(buildConfigId),
-                                                                    status: BuildStatus.SUCCESS
-                                            ));
+                status: BuildStatus.SUCCESS));
         }
 
-        public Build LastSuccessfulBuildByBuildConfigId(string buildConfigId)
+        public async Task<Build> LastSuccessfulBuildByBuildConfigId(string buildConfigId)
         {
-            var builds = ByBuildLocator(BuildLocator.WithDimensions(BuildTypeLocator.WithId(buildConfigId),
-                                                                          status: BuildStatus.SUCCESS,
-                                                                          maxResults: 1
-                                                  ));
+            var builds = await ByBuildLocator(BuildLocator.WithDimensions(BuildTypeLocator.WithId(buildConfigId),
+                status: BuildStatus.SUCCESS, maxResults: 1));
             return builds != null ? builds.FirstOrDefault() : new Build();
         }
 
-        public List<Build> FailedBuildsByBuildConfigId(string buildConfigId)
+        public async Task<List<Build>> FailedBuildsByBuildConfigId(string buildConfigId)
         {
-            return ByBuildLocator(BuildLocator.WithDimensions(BuildTypeLocator.WithId(buildConfigId),
-                                                                    status: BuildStatus.FAILURE
-                                            ));
+            return await ByBuildLocator(BuildLocator.WithDimensions(BuildTypeLocator.WithId(buildConfigId),
+                status: BuildStatus.FAILURE));
         }
 
-        public Build LastFailedBuildByBuildConfigId(string buildConfigId)
+        public async Task<Build> LastFailedBuildByBuildConfigId(string buildConfigId)
         {
-            var builds = ByBuildLocator(BuildLocator.WithDimensions(BuildTypeLocator.WithId(buildConfigId),
-                                                                          status: BuildStatus.FAILURE,
-                                                                          maxResults: 1
-                                                  ));
+            var builds = await ByBuildLocator(BuildLocator.WithDimensions(BuildTypeLocator.WithId(buildConfigId),
+                status: BuildStatus.FAILURE, maxResults: 1));
             return builds != null ? builds.FirstOrDefault() : new Build();
         }
 
-        public Build LastBuildByBuildConfigId(string buildConfigId)
+        public async Task<Build> LastBuildByBuildConfigId(string buildConfigId)
         {
-            var builds = ByBuildLocator(BuildLocator.WithDimensions(BuildTypeLocator.WithId(buildConfigId),
-                                                                          maxResults: 1
-                                                  ));
+            var builds = await ByBuildLocator(BuildLocator.WithDimensions(
+                BuildTypeLocator.WithId(buildConfigId), maxResults: 1));
             return builds != null ? builds.FirstOrDefault() : new Build();
         }
 
-        public List<Build> ErrorBuildsByBuildConfigId(string buildConfigId)
+        public async Task<List<Build>> ErrorBuildsByBuildConfigId(string buildConfigId)
         {
-            return ByBuildLocator(BuildLocator.WithDimensions(BuildTypeLocator.WithId(buildConfigId),
-                                                                    status: BuildStatus.ERROR
-                                            ));
+            return await ByBuildLocator(BuildLocator.WithDimensions(BuildTypeLocator.WithId(buildConfigId),
+                status: BuildStatus.ERROR));
         }
 
-        public Build LastErrorBuildByBuildConfigId(string buildConfigId)
+        public async Task<Build> LastErrorBuildByBuildConfigId(string buildConfigId)
         {
-            var builds = ByBuildLocator(BuildLocator.WithDimensions(BuildTypeLocator.WithId(buildConfigId),
-                                                                          status: BuildStatus.ERROR,
-                                                                          maxResults: 1
-                                                  ));
+            var builds = await ByBuildLocator(BuildLocator.WithDimensions(BuildTypeLocator.WithId(buildConfigId),
+                status: BuildStatus.ERROR, maxResults: 1));
             return builds != null ? builds.FirstOrDefault() : new Build();
         }
 
-        public List<Build> ByBuildConfigId(string buildConfigId)
+        public async Task<List<Build>> ByBuildConfigId(string buildConfigId)
         {
-            return ByBuildLocator(BuildLocator.WithDimensions(BuildTypeLocator.WithId(buildConfigId)
-                                            ));
+            return await ByBuildLocator(BuildLocator.WithDimensions(BuildTypeLocator.WithId(buildConfigId)));
         }
 
-        public List<Build> ByConfigIdAndTag(string buildConfigId, string tag)
+        public async Task<List<Build>> ByConfigIdAndTag(string buildConfigId, string tag)
         {
-            return ByConfigIdAndTag(buildConfigId, new[] { tag });
+            return await ByConfigIdAndTag(buildConfigId, new[] { tag });
         }
 
-        public List<Build> ByConfigIdAndTag(string buildConfigId, string[] tags)
+        public async Task<List<Build>> ByConfigIdAndTag(string buildConfigId, string[] tags)
         {
-            return ByBuildLocator(BuildLocator.WithDimensions(BuildTypeLocator.WithId(buildConfigId),
-                                                                    tags: tags
-                                            ));
+            return await ByBuildLocator(BuildLocator.WithDimensions(BuildTypeLocator.WithId(buildConfigId),
+                tags: tags));
         }
 
-        public List<Build> ByUserName(string userName)
+        public async Task<List<Build>> ByUserName(string userName)
         {
-            return ByBuildLocator(BuildLocator.WithDimensions(
-                user: UserLocator.WithUserName(userName)
-                                            ));
+            return await ByBuildLocator(BuildLocator.WithDimensions(user: UserLocator.WithUserName(userName)));
         }
 
-        public List<Build> AllSinceDate(DateTime date)
+        public async Task<List<Build>> AllSinceDate(DateTime date)
         {
-            return ByBuildLocator(BuildLocator.WithDimensions(sinceDate: date));
+            return await ByBuildLocator(BuildLocator.WithDimensions(sinceDate: date));
         }
 
-        public List<Build> ByBranch(string branchName)
+        public async Task<List<Build>> ByBranch(string branchName)
         {
-            return ByBuildLocator(BuildLocator.WithDimensions(branch: branchName));
+            return await ByBuildLocator(BuildLocator.WithDimensions(branch: branchName));
         } 
 
-        public List<Build> AllBuildsOfStatusSinceDate(DateTime date, BuildStatus buildStatus)
+        public async Task<List<Build>> AllBuildsOfStatusSinceDate(DateTime date, BuildStatus buildStatus)
         {
-            return ByBuildLocator(BuildLocator.WithDimensions(sinceDate: date, status: buildStatus));
+            return await ByBuildLocator(BuildLocator.WithDimensions(sinceDate: date, status: buildStatus));
         }
 
-        public List<Build> NonSuccessfulBuildsForUser(string userName)
+        public async Task<List<Build>> NonSuccessfulBuildsForUser(string userName)
         {
-            var builds = ByUserName(userName);
+            var builds = await ByUserName(userName);
             if (builds == null)
             {
                 return null;
             }
-
             return builds.Where(b => b.Status != "SUCCESS").ToList();
         }
     }

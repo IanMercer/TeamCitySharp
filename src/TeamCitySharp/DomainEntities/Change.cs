@@ -9,7 +9,7 @@ namespace TeamCitySharp.DomainEntities
         public string Href { get; set; }
         public string Id { get; set; }
         public string Version { get; set; }
-        public DateTime Date { get; set; }
+        public DateTimeOffset Date { get; set; }
         public string Comment { get; set; }
 
         public FileWrapper Files { get; set; }

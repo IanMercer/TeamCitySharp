@@ -2,6 +2,7 @@
 {
     using System.Collections.Generic;
     using System.Text;
+    using System.Threading.Tasks;
     using TeamCitySharp.Connection;
     using TeamCitySharp.DomainEntities;
 
@@ -15,32 +16,29 @@
             _caller = caller;
         }
 
-        public Server ServerInfo()
+        public async Task<Server> ServerInfo()
         {
-            var server = _caller.Get<Server>(ServerUrlPrefix);
+            var server = await _caller.Get<Server>(ServerUrlPrefix);
             return server;
         }
 
-        public List<Plugin> AllPlugins()
+        public async Task<List<Plugin>> AllPlugins()
         {
-            var pluginWrapper = _caller.Get<PluginWrapper>(ServerUrlPrefix + "/plugins");
-
+            var pluginWrapper = await _caller.Get<PluginWrapper>(ServerUrlPrefix + "/plugins");
             return pluginWrapper.Plugin;
         }
 
-        public string TriggerServerInstanceBackup(BackupOptions backupOptions)
+        public async Task<string> TriggerServerInstanceBackup(BackupOptions backupOptions)
         {
             var backupOptionsUrlPart = this.BuildBackupOptionsUrl(backupOptions);
             var url = string.Concat(ServerUrlPrefix, "/backup?", backupOptionsUrlPart);
-
-            return _caller.StartBackup(url);
+            return await _caller.StartBackup(url);
         }
 
-        public string GetBackupStatus()
+        public async Task<string> GetBackupStatus()
         {
             var url = string.Concat(ServerUrlPrefix, "/backup");
-
-            return _caller.GetRaw(url);
+            return await _caller.Get<string>(url);
         }
 
         private string BuildBackupOptionsUrl(BackupOptions backupOptions)

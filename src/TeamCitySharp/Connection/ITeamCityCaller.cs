@@ -1,42 +1,29 @@
 ﻿namespace TeamCitySharp.Connection
 {
     using System;
-    using EasyHttp.Http;
+    using System.Net.Http;
+    using System.Threading.Tasks;
 
     internal interface ITeamCityCaller
     {
         void Connect(string userName, string password, bool actAsGuest);
 
-        T GetFormat<T>(string urlPart, params object[] parts);
+        Task GetDownloadFormat(Action<string> downloadHandler, string urlPart, params object[] parts);
 
-        void GetFormat(string urlPart, params object[] parts);
+        Task<string> StartBackup(string urlPart);
 
-        T PostFormat<T>(object data, string contenttype, string accept, string urlPart, params object[] parts);
+        Task<T> Get<T>(string urlPart);
+        Task<T> GetFormat<T>(string urlPart, params object[] parts);
 
-        void PostFormat(object data, string contenttype, string urlPart, params object[] parts);
+        Task<U> Post<T, U>(T data, string contenttype, string urlPart);
+        Task<U> PostFormat<T, U>(T data, string contenttype, string urlPart, params object[] parts);
 
-        void PutFormat(object data, string contenttype, string urlPart, params object[] parts);
+        Task<U> Put<T, U>(T data, string contenttype, string urlPart);
+        Task<U> PutFormat<T, U>(T data, string contenttype, string urlPart, params object[] parts);
 
-        void DeleteFormat(string urlPart, params object[] parts);
+        Task<bool> Authenticate(string urlPart);
 
-        void GetDownloadFormat(Action<string> downloadHandler, string urlPart, params object[] parts);
-
-        string StartBackup(string urlPart);
-
-        T Get<T>(string urlPart);
-
-        void Get(string urlPart);
-
-        T Post<T>(string data, string contenttype, string urlPart, string accept);
-
-        bool Authenticate(string urlPart);
-
-        HttpResponse Post(object data, string contenttype, string urlPart, string accept);
-
-        HttpResponse Put(object data, string contenttype, string urlPart, string accept);
-
-        void Delete(string urlPart);
-
-        string GetRaw(string urlPart);
+        Task<bool> Delete(string urlPart);
+        Task<bool> DeleteFormat(string urlPart, params object[] parts);
     }
 }

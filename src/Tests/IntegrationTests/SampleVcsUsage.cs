@@ -21,7 +21,7 @@ namespace TeamCitySharp.IntegrationTests
 
         [Test]
         [ExpectedException(typeof(ArgumentNullException))]
-        public void it_returns_exception_when_no_host_specified()
+        public void it_throws_exception_when_no_host_specified()
         {
             var client = new TeamCityClient(null);
 
@@ -29,41 +29,34 @@ namespace TeamCitySharp.IntegrationTests
         }
 
         [Test]
-        [ExpectedException(typeof(WebException))]
-        public void it_returns_exception_when_host_does_not_exist()
+        public void it_throws_exception_when_host_does_not_exist()
         {
             var client = new TeamCityClient("test:81");
             client.Connect("admin", "qwerty");
 
-            var vcsroots = client.VcsRoots.All();
-
-            //Assert: Exception
+            Assert.That(async () => await _client.VcsRoots.All(), Throws.Exception.TypeOf<WebException>());
         }
 
         [Test]
-        [ExpectedException(typeof(ArgumentException))]
-        public void it_returns_exception_when_no_connection_formed()
+        public void it_throws_exception_when_no_connection_formed()
         {
             var client = new TeamCityClient("teamcity.codebetter.com");
 
-            var vcsRoots = client.VcsRoots.All();
-
-            //Assert: Exception
+            Assert.That(async () => await _client.VcsRoots.All(), Throws.Exception.TypeOf<ArgumentException>());
         }
         
         [Test]
         public void it_returns_all_vcs_roots()
         {
-            List<VcsRoot> vcsRoots = _client.VcsRoots.All();
-
+            List<VcsRoot> vcsRoots = _client.VcsRoots.All().Result;
+            Assert.NotNull(vcsRoots, "VCS roots was null");
             Assert.That(vcsRoots.Any(), "No VCS Roots were found for the installation");
         }
 
         [TestCase("1")]
         public void it_returns_vcs_details_when_passing_vcs_root_id(string vcsRootId)
         {
-            VcsRoot rootDetails = _client.VcsRoots.ById(vcsRootId);
-
+            VcsRoot rootDetails = _client.VcsRoots.ById(vcsRootId).Result;
             Assert.That(rootDetails != null, "Cannot find the specific VCSRoot");
         }
     }

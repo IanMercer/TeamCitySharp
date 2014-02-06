@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using TeamCitySharp.Connection;
 using TeamCitySharp.DomainEntities;
 
@@ -14,31 +15,27 @@ namespace TeamCitySharp.ActionTypes
             _caller = caller;
         }
 
-        public List<Change> All()
+        public async Task<List<Change>> All()
         {
-            var changeWrapper = _caller.Get<ChangeWrapper>("/app/rest/changes");
-
+            var changeWrapper = await _caller.Get<ChangeWrapper>("/app/rest/changes");
             return changeWrapper.Change;
         }
 
-        public Change ByChangeId(string id)
+        public async Task<Change> ByChangeId(string id)
         {
-            var change = _caller.GetFormat<Change>("/app/rest/changes/id:{0}", id);
-
+            var change = await _caller.GetFormat<Change>("/app/rest/changes/id:{0}", id);
             return change;
         }
 
-        public List<Change> ByBuildConfigId(string buildConfigId)
+        public async Task<List<Change>> ByBuildConfigId(string buildConfigId)
         {
-            var changeWrapper = _caller.GetFormat<ChangeWrapper>("/app/rest/changes?buildType={0}", buildConfigId);
-
+            var changeWrapper = await _caller.GetFormat<ChangeWrapper>("/app/rest/changes?buildType={0}", buildConfigId);
             return changeWrapper.Change;
         }
 
-        public Change LastChangeDetailByBuildConfigId(string buildConfigId)
+        public async Task<Change> LastChangeDetailByBuildConfigId(string buildConfigId)
         {
-            var changes = ByBuildConfigId(buildConfigId);
-
+            var changes = await ByBuildConfigId(buildConfigId);
             return changes.FirstOrDefault();
         }
 

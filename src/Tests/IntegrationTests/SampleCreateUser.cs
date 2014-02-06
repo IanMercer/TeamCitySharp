@@ -28,13 +28,13 @@ namespace TeamCitySharp.IntegrationTests
             string email = "John.Doe@test.com";
             string password = "J0hnD03";
             
-            var createUserResult = _client.Users.Create(userName, name, email, password);
+            var createUserResult = _client.Users.Create(userName, name, email, password).Result;
 
             ITeamCityClient _newUser;
             _newUser = new TeamCityClient("teamcity.codebetter.com");
             _newUser.Connect(userName, password);
 
-            var loginResponse = _newUser.Authenticate();
+            var loginResponse = _newUser.Authenticate().Result;
 
             Assert.That(createUserResult && loginResponse);
         }

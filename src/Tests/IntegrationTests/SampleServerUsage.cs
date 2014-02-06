@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Net;
 using NUnit.Framework;
 using TeamCitySharp.DomainEntities;
+using System.Net.Http;
 
 namespace TeamCitySharp.IntegrationTests
 {
@@ -29,41 +30,35 @@ namespace TeamCitySharp.IntegrationTests
         }
 
         [Test]
-        [ExpectedException(typeof(WebException))]
         public void it_throws_exception_when_host_does_not_exist()
         {
             var client = new TeamCityClient("test:81");
             client.Connect("admin", "qwerty");
 
-            var plugins = client.ServerInformation.AllPlugins();
-
-            //Assert: Exception
+            Assert.That(async () => await client.ServerInformation.AllPlugins(), 
+                Throws.Exception.TypeOf<HttpRequestException>());
         }
 
         [Test]
-        [ExpectedException(typeof(ArgumentException))]
         public void it_throws_exception_when_no_connection_formed()
         {
             var client = new TeamCityClient("teamcity.codebetter.com");
 
-            var plugins = client.ServerInformation.AllPlugins();
-
-            //Assert: Exception
+            Assert.That(async () => await client.ServerInformation.AllPlugins(),
+                Throws.Exception.TypeOf<HttpRequestException>());
         }
 
         [Test]
         public void it_returns_server_info()
         {
-            Server serverInfo = _client.ServerInformation.ServerInfo();
-
+            Server serverInfo = _client.ServerInformation.ServerInfo().Result;
             Assert.That(serverInfo != null, "The server is not returning any information");
         }
 
         [Test]
         public void it_returns_all_server_plugins()
         {
-            List<Plugin> plugins = _client.ServerInformation.AllPlugins();
-
+            List<Plugin> plugins = _client.ServerInformation.AllPlugins().Result;
             Assert.IsNotNull(plugins, "Server is not returning a plugin list");
         }
     }

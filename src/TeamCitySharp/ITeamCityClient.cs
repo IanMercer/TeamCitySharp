@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using TeamCitySharp.ActionTypes;
 
 namespace TeamCitySharp
@@ -6,7 +7,7 @@ namespace TeamCitySharp
     {
         void Connect(string userName, string password);
         void ConnectAsGuest();
-        bool Authenticate();
+        Task<bool> Authenticate();
 
         IBuilds Builds { get; }
         IBuildConfigs BuildConfigs { get; }

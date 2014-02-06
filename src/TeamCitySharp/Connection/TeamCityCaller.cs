@@ -1,12 +1,16 @@
-﻿﻿using System;
+﻿﻿using Newtonsoft.Json;
+using System;
 using System.IO;
 using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Net.Http.Formatting;
 using System.Security.Authentication;
-using EasyHttp.Http;
+using System.Threading.Tasks;
 using TeamCitySharp.DomainEntities;
 using File = System.IO.File;
-using HttpException = EasyHttp.Infrastructure.HttpException;
-using HttpResponse = EasyHttp.Http.HttpResponse;
+using Newtonsoft.Json.Converters;
+using System.Collections.Generic;
 
 namespace TeamCitySharp.Connection
 {
@@ -28,49 +32,108 @@ namespace TeamCitySharp.Connection
             _configuration.Password = password;
             _configuration.UserName = userName;
             _configuration.ActAsGuest = actAsGuest;
+            if (!actAsGuest && (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(password)))
+                throw new ArgumentException("If you are not acting as a guest you must supply userName and password");
         }
 
-        public T GetFormat<T>(string urlPart, params object[] parts)
+        // GET
+
+        public Task<T> GetFormat<T>(string urlPart, params object[] parts)
         {
             return Get<T>(string.Format(urlPart, parts));
         }
 
-        public void GetFormat(string urlPart, params object[] parts)
+        private JsonMediaTypeFormatter[] Formatters
         {
-            Get(string.Format(urlPart, parts));
-        }
-
-        public T PostFormat<T>(object data, string contenttype, string accept, string urlPart, params object[] parts)
-        {
-            return Post<T>(data.ToString(), contenttype, string.Format(urlPart, parts), accept);
-        }
-
-        public void PostFormat(object data, string contenttype, string urlPart, params object[] parts)
-        {
-            Post(data.ToString(), contenttype, string.Format(urlPart, parts), string.Empty);
-        }
-
-        public void PutFormat(object data, string contenttype, string urlPart, params object[] parts)
-        {
-            Put(data.ToString(), contenttype, string.Format(urlPart, parts), string.Empty);
-        }
-
-        public void DeleteFormat(string urlPart, params object[] parts)
-        {
-            Delete(string.Format(urlPart, parts));
-        }
-
-        public void GetDownloadFormat(Action<string> downloadHandler, string urlPart, params object[] parts)
-        {
-            if (CheckForUserNameAndPassword())
+            get
             {
-                throw new ArgumentException("If you are not acting as a guest you must supply userName and password");
+                return new[]
+                {
+                    new JsonMediaTypeFormatter { SerializerSettings = 
+                        new JsonSerializerSettings
+                        {
+                            Converters = new List<JsonConverter>
+                            {
+                                new TeamCityDateTimeConverter()
+//                                new IsoDateTimeConverter()
+                            }
+                        }
+                    }
+                };
             }
+        }
 
-            if (string.IsNullOrEmpty(urlPart))
-            {
-                throw new ArgumentException("Url must be specfied");
-            }
+        public async Task<T> Get<T>(string urlPart)
+        {
+            var response = await GetResponse(urlPart);
+            response.EnsureSuccessStatusCode();
+            var result = await response.Content.ReadAsAsync<T>(this.Formatters);
+            return result;
+        }
+
+        private async Task<HttpResponseMessage> GetResponse(string urlPart)
+        {
+            var url = CreateUrl(urlPart);
+            var client = CreateHttpClient("application/json");
+            var response = await client.GetAsync(url);
+            if (!response.IsSuccessStatusCode && response.StatusCode == HttpStatusCode.Unauthorized)
+                throw new AuthenticationException("Authentication failed for " + url);
+            response.EnsureSuccessStatusCode();
+            return response;
+        }
+
+        // POST
+
+        public Task<U> PostFormat<T, U>(T data, string contenttype, string urlPart, params object[] parts)
+        {
+            return Post<T, U>(data, contenttype, string.Format(urlPart, parts));
+        }
+
+        public async Task<U> Post<T, U>(T data, string contentType, string urlPart)
+        {
+            var mediaTypeFormatter = (contentType == "text/xml") ? (MediaTypeFormatter)(new XmlMediaTypeFormatter()) : new JsonMediaTypeFormatter();
+            var client = CreateHttpClient(null);
+            var response = await client.PostAsync<T>(CreateUrl(urlPart), data, mediaTypeFormatter);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadAsAsync<U>(this.Formatters);
+        }
+
+        // PUT
+
+        public Task<U> PutFormat<T, U>(T data, string contenttype, string urlPart, params object[] parts)
+        {
+            return Put<T, U>(data, contenttype, string.Format(urlPart, parts));
+        }
+
+        public async Task<U> Put<T, U>(T data, string contentType, string urlPart)
+        {
+            var mediaTypeFormatter = (contentType == "text/xml") ? (MediaTypeFormatter)(new XmlMediaTypeFormatter()) : new JsonMediaTypeFormatter();
+            var client = CreateHttpClient(null);
+            var response = await client.PutAsync<T>(CreateUrl(urlPart), data, mediaTypeFormatter);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadAsAsync<U>(this.Formatters);
+        }
+
+        // DELETE
+
+        public Task<bool> DeleteFormat(string urlPart, params object[] parts)
+        {
+            return Delete(string.Format(urlPart, parts));
+        }
+
+        public async Task<bool> Delete(string urlPart)
+        {
+            var client = CreateHttpClient("text/plain");
+            var response = await client.DeleteAsync(CreateUrl(urlPart));
+            response.EnsureSuccessStatusCode();
+            return response.IsSuccessStatusCode;
+        }
+
+        // TEAMCITY SPECIFIC METHODS
+
+        public async Task GetDownloadFormat(Action<string> downloadHandler, string urlPart, params object[] parts)
+        {
+            var url = CreateUrl(string.Format(urlPart, parts));
 
             if (downloadHandler == null)
             {
@@ -78,13 +141,21 @@ namespace TeamCitySharp.Connection
             }
 
             string tempFileName = Path.GetRandomFileName();
-            var url = CreateUrl(string.Format(urlPart, parts));
 
             try
             {
-                CreateHttpClient(_configuration.UserName, _configuration.Password, HttpContentTypes.ApplicationJson).GetAsFile(url, tempFileName);
-                downloadHandler.Invoke(tempFileName);
+                using (var client = CreateHttpClient("application/json"))
+                {
+                    var stream = await client.GetStreamAsync(url);
 
+                    using (var fileStream = File.Create(tempFileName))
+                    {
+                        stream.Seek(0, SeekOrigin.Begin);
+                        await stream.CopyToAsync(fileStream);
+                        fileStream.Close();
+                    }
+                }
+                downloadHandler.Invoke(tempFileName);
             }
             finally
             {
@@ -95,198 +166,94 @@ namespace TeamCitySharp.Connection
             }
         }
 
-        public string StartBackup(string urlPart)
+        public async Task<string> StartBackup(string urlPart)
         {
-            if (CheckForUserNameAndPassword())
-                throw new ArgumentException("If you are not acting as a guest you must supply userName and password");
-
-            if (string.IsNullOrEmpty(urlPart))
-                throw new ArgumentException("Url must be specfied");
-
             var url = CreateUrl(urlPart);
-
-            var httpClient = CreateHttpClient(_configuration.UserName, _configuration.Password, HttpContentTypes.TextPlain);
-            var response = httpClient.Post(url, null, HttpContentTypes.TextPlain);
-            ThrowIfHttpError(response, url);
-
-            if (response.StatusCode == HttpStatusCode.OK)
+            var httpClient = CreateHttpClient("text/plain");
+            var response = await httpClient.PostAsync(url, null);
+            response.EnsureSuccessStatusCode();
+            if (response.IsSuccessStatusCode)
             {
-                return response.RawText;
+                return await response.Content.ReadAsStringAsync();
             }
-
             return string.Empty;
         }
 
-        public T Get<T>(string urlPart)
-        {
-            var response = GetResponse(urlPart);
-            return response.StaticBody<T>();
-        }
-        
-        public void Get(string urlPart)
-        {
-            GetResponse(urlPart);
-        }
-
-        private HttpResponse GetResponse(string urlPart)
-        {
-            if (CheckForUserNameAndPassword())
-                throw new ArgumentException("If you are not acting as a guest you must supply userName and password");
-
-            if (string.IsNullOrEmpty(urlPart))
-                throw new ArgumentException("Url must be specfied");
-
-            var url = CreateUrl(urlPart);
-
-            var response = CreateHttpClient(_configuration.UserName, _configuration.Password, HttpContentTypes.ApplicationJson).Get(url);
-            ThrowIfHttpError(response, url);
-            return response;
-        }
-
-        public T Post<T>(string data, string contenttype, string urlPart, string accept)
-        {
-            return Post(data, contenttype, urlPart, accept).StaticBody<T>();
-        }
-
-        public bool Authenticate(string urlPart)
+        public async Task<bool> Authenticate(string urlPart)
         {
             try
             {
-                var httpClient = CreateHttpClient(_configuration.UserName, _configuration.Password, HttpContentTypes.TextPlain);
-                httpClient.ThrowExceptionOnHttpError = true;
-                httpClient.Get(CreateUrl(urlPart));
-
-                var response = httpClient.Response;
-                return response.StatusCode == HttpStatusCode.OK;
+                var httpClient = CreateHttpClient("text/plain");
+                var response = await httpClient.GetAsync(CreateUrl(urlPart));
+                response.EnsureSuccessStatusCode();
+                return response.IsSuccessStatusCode;
             }
-            catch (HttpException exception)
+            catch (System.Net.Http.HttpRequestException exception)
             {
-                throw new AuthenticationException(exception.StatusDescription);
+                throw new AuthenticationException(exception.Message, exception);
             }
         }
 
-        public HttpResponse Post(object data, string contenttype, string urlPart, string accept)
-        {
-            var client = MakePostRequest(data, contenttype, urlPart, accept);
-
-            return client.Response;
-        }
-
-        public HttpResponse Put(object data, string contenttype, string urlPart, string accept)
-        {
-            var client = MakePutRequest(data, contenttype, urlPart, accept);
-
-            return client.Response;
-        }
-
-        public void Delete(string urlPart)
-        {
-            MakeDeleteRequest(urlPart);
-        }
-
-        private void MakeDeleteRequest(string urlPart)
-        {
-            var client = CreateHttpClient(_configuration.UserName, _configuration.Password, HttpContentTypes.TextPlain);
-            client.Delete(CreateUrl(urlPart));
-            ThrowIfHttpError(client.Response, client.Request.Uri);
-        }
-
-        private HttpClient MakePostRequest(object data, string contenttype, string urlPart, string accept)
-        {
-            var client = CreateHttpClient(_configuration.UserName, _configuration.Password, string.IsNullOrWhiteSpace(accept) ? GetContentType(data.ToString()) : accept);
-
-            client.Request.Accept = accept;
-
-            client.Post(CreateUrl(urlPart), data, contenttype);
-            ThrowIfHttpError(client.Response, client.Request.Uri);
-
-            return client;
-        }
-
-        private HttpClient MakePutRequest(object data, string contenttype, string urlPart, string accept)
-        {
-            var client = CreateHttpClient(_configuration.UserName, _configuration.Password, string.IsNullOrWhiteSpace(accept) ? GetContentType(data.ToString()) : accept);
-
-            client.Request.Accept = accept;
-
-            client.Put(CreateUrl(urlPart), data, contenttype);
-            ThrowIfHttpError(client.Response, client.Request.Uri);
-
-            return client;
-        }
-
-        private static bool IsHttpError(HttpResponse response)
-        {
-            var num = (int)response.StatusCode / 100;
-
-            return (num == 4 || num == 5);
-        }
-
-        /// <summary>
-        /// <para>If the <paramref name="response"/> is OK (see <see cref="IsHttpError"/> for definition), does nothing.</para>
-        /// <para>Otherwise, throws an exception which includes also the response raw text.
-        /// This would often contain a Java exception dump from the TeamCity REST Plugin, which reveals the cause of some cryptic cases otherwise showing just "Bad Request" in the HTTP error.
-        /// Also this comes in handy when TeamCity goes into maintenance, and you get back the banner in HTML instead of your data.</para> 
-        /// </summary>
-        private static void ThrowIfHttpError(HttpResponse response, string url)
-        {
-            if(!IsHttpError(response))
-                return;
-            throw new HttpException(response.StatusCode, string.Format("Error: {0}\nHTTP: {3}\nURL: {1}\n{2}", response.StatusDescription, url, response.RawText, response.StatusCode));
-        }
 
         private string CreateUrl(string urlPart)
         {
+            if (string.IsNullOrEmpty(urlPart))
+                throw new ArgumentException("Url must be specfied");
             var protocol = _configuration.UseSSL ? "https://" : "http://";
             var authType = _configuration.ActAsGuest ? "/guestAuth" : "/httpAuth";
-
             return string.Format("{0}{1}{2}{3}", protocol, _configuration.HostName, authType, urlPart);
         }
 
-        private HttpClient CreateHttpClient(string userName, string password, string accept)
+        private HttpClient CreateHttpClient(string accept)
         {
-            var httpClient = new HttpClient(new TeamcityJsonEncoderDecoderConfiguration());
-            httpClient.Request.Accept = accept;
+            HttpClient httpClient;
             if (!_configuration.ActAsGuest)
             {
-                httpClient.Request.SetBasicAuthentication(userName, password);
-                httpClient.Request.ForceBasicAuth = true;
-            }
+                var credentials = new NetworkCredential(_configuration.UserName, _configuration.Password);
+                var handler = new HttpClientHandler { Credentials = credentials };
+                handler.PreAuthenticate = true;
 
+                httpClient = new HttpClient(handler);
+                httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("basic");
+            }
+            else
+            {
+                httpClient = new HttpClient();
+            }
+            if (accept != null)
+            {
+                httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue(accept));
+            }
+            else
+            {
+                // HttpClient can easily deserialize XML or JSON
+                httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("text/xml"));
+            }
             return httpClient;
         }
 
         // only used by the artifact listing methods since i havent found a way to deserialize them into a domain entity
-        public string GetRaw(string urlPart)
+        public async Task<string> GetRaw(string urlPart)
         {
-            if (CheckForUserNameAndPassword())
-                throw new ArgumentException("If you are not acting as a guest you must supply userName and password");
-
             if (string.IsNullOrEmpty(urlPart))
                 throw new ArgumentException("Url must be specfied");
 
             var url = CreateUrl(urlPart);
 
-            var httpClient = CreateHttpClient(_configuration.UserName, _configuration.Password, HttpContentTypes.TextPlain);
-            var response = httpClient.Get(url);
-            if (IsHttpError(response))
-            {
-                throw new HttpException(response.StatusCode, string.Format("Error {0}: Thrown with URL {1}", response.StatusDescription, url));
-            }
+            var httpClient = CreateHttpClient("text/plain");
+            var response = await httpClient.GetAsync(url);
 
-            return response.RawText;
-        }
+            response.EnsureSuccessStatusCode();
 
-        private bool CheckForUserNameAndPassword()
-        {
-            return !_configuration.ActAsGuest && string.IsNullOrEmpty(_configuration.UserName) && string.IsNullOrEmpty(_configuration.Password);
+            return await response.Content.ReadAsStringAsync();
         }
 
         private string GetContentType(string data)
         {
             if (data.StartsWith("<"))
-                return HttpContentTypes.ApplicationXml;
-            return HttpContentTypes.TextPlain;
+                return "application/xml";
+            return "text/plain";
         }
     }
 }

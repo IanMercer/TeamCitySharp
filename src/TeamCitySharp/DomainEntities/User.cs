@@ -10,7 +10,7 @@ namespace TeamCitySharp.DomainEntities
         public string Href { get; set; }
         public string Email { get; set; }
         public string Realm { get; set; }
-        public DateTime LastLogin { get; set; }
+        public DateTimeOffset LastLogin { get; set; }
 
         public Properties Properties { get; set; }
         public RoleWrapper Roles { get; set; }
