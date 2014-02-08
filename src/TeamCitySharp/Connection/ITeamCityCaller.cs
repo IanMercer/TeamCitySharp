@@ -1,6 +1,7 @@
 ﻿namespace TeamCitySharp.Connection
 {
     using System;
+    using System.IO;
     using System.Net.Http;
     using System.Threading.Tasks;
 
@@ -8,7 +9,7 @@
     {
         void Connect(string userName, string password, bool actAsGuest);
 
-        Task GetDownloadFormat(Action<string> downloadHandler, string urlPart, params object[] parts);
+        Task<bool> GetDownloadFormat(string path, TimeSpan timeout, string urlPart, params object[] parts);
 
         Task<string> StartBackup(string urlPart);
 

@@ -1,11 +1,12 @@
 ﻿using System;
+using System.IO;
+using System.Threading.Tasks;
 
 namespace TeamCitySharp.ActionTypes
 {
     public interface IBuildArtifacts
     {
-        void DownloadArtifactsByBuildId(string buildId, Action<string> downloadHandler);
-
+        //Task<List<string>> DownloadArtifactsByBuildId(string path, string buildId);
         ArtifactWrapper ByBuildConfigId(string buildConfigId);
     }
 }

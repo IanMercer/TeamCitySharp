@@ -18,10 +18,10 @@ namespace TeamCitySharp.ActionTypes
             _caller = caller;
         }
 
-        public void DownloadArtifactsByBuildId(string buildId, Action<string> downloadHandler)
-        {
-            _caller.GetDownloadFormat(downloadHandler, "/downloadArtifacts.html?buildId={0}", buildId);
-        }
+        //public async Task<bool> DownloadArtifactsByBuildId(string path, string buildId)
+        //{
+        //    return await _caller.GetDownloadFormat(path, "/downloadArtifacts.html?buildId={0}", buildId);
+        //}
 
         public ArtifactWrapper ByBuildConfigId(string buildConfigId)
         {
@@ -105,36 +105,35 @@ namespace TeamCitySharp.ActionTypes
         /// <summary>
         /// Takes a list of artifact urls and downloads them, see ArtifactsBy* methods.
         /// </summary>
-        /// <param name="directory">
-        /// Destination directory for downloaded artifacts, default is current working directory.
-        /// </param>
-        /// <param name="flatten">
-        /// If <see langword="true"/> all files will be downloaded to destination directory, no subfolders will be created.
-        /// </param>
-        /// <param name="overwrite">
-        /// If <see langword="true"/> files that already exist where a downloaded file is to be placed will be deleted prior to download.
+        /// <param name="destinationDirectory">
+        /// Destination directory for downloaded artifacts.  Must NOT exist.
         /// </param>
         /// <returns>
-        /// A list of full paths to all downloaded artifacts.
+        /// True if the download was successful, otherwise throws an error
         /// </returns>
-        public List<string> Download(string directory = null, bool flatten = false, bool overwrite = true)
+        /// <remarks>
+        /// Changed API from original.  Artifacts should be treated as an atomic unit
+        /// fetched as a whole and delivered complete (or not at all).
+        /// </remarks>
+        public async Task<bool> Download(string destinationDirectory, TimeSpan timeout = default(TimeSpan))
         {
-            if (directory == null)
-            {
-                directory = Directory.GetCurrentDirectory();
-            }
-            var downloaded = new List<string>();
+            if (string.IsNullOrWhiteSpace(destinationDirectory)) throw new ArgumentNullException("directory");
+            if (File.Exists(destinationDirectory)) throw new ArgumentException(destinationDirectory + " is a file, cannot overwrite");
+            if (Directory.Exists(destinationDirectory)) throw new ArgumentException(destinationDirectory + " already exists; must specify a new location each time");
+
+            // Download to a temp directory, not directly to the target directory
+            string tempDirectory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+
             foreach (var url in _urls)
             {
-                // user probably didnt use to artifact url generating functions
+                // user probably didn't use to artifact url generating functions
                 Debug.Assert(url.StartsWith("/repository/download/"));
 
                 // figure out local filename
+                // TODO: Fix the somewhat risky assumption that there are 5 parts before it
                 var parts = url.Split('/').Skip(5).ToArray();
-                var destination = flatten
-                    ? parts.Last()
-                    : string.Join(Path.DirectorySeparatorChar.ToString(), parts);
-                destination = Path.Combine(directory, destination);
+                string fileName = string.Join(Path.DirectorySeparatorChar.ToString(), parts);
+                string destination = Path.Combine(tempDirectory, fileName);
 
                 // create directories that do not exist
                 var directoryName = Path.GetDirectoryName(destination);
@@ -143,18 +142,20 @@ namespace TeamCitySharp.ActionTypes
                     Directory.CreateDirectory(directoryName);
                 }
 
-                // add artifact to list regardless if it was downloaded or skipped
-                downloaded.Add(Path.GetFullPath(destination));
-
-                // if the file already exists delete it or move to next artifact
-                if (File.Exists(destination))
-                {
-                    if (overwrite) File.Delete(destination);
-                    else continue;
-                }
-                _caller.GetDownloadFormat(tempfile => File.Move(tempfile, destination), url);
+                var ok = await _caller.GetDownloadFormat(destination, timeout, url);
             }
-            return downloaded;
+
+            // finally, in one atomic action, move the downloaded artifacts over
+            if (_urls.Any())
+            {
+                Directory.Move(tempDirectory, destinationDirectory);
+            }
+            else
+            {
+                // No artifacts, create a blank directory
+                Directory.CreateDirectory(destinationDirectory);
+            }
+            return true;
         }
     }
 }

@@ -131,38 +131,28 @@ namespace TeamCitySharp.Connection
 
         // TEAMCITY SPECIFIC METHODS
 
-        public async Task GetDownloadFormat(Action<string> downloadHandler, string urlPart, params object[] parts)
+        /// <summary>
+        /// Get Download
+        /// </summary>
+        /// <remarks>
+        /// Caller should supply a timeout because the default for HttpClient is really short
+        /// Caller is responsible for deciding where file goes and cleaning it up afterwards
+        /// (This is a change from the original API, but is better suited to async usage and, in any
+        /// case I don't believe that this class should own file naming, location or cleanup [SRP])
+        /// </remarks>
+        public async Task<bool> GetDownloadFormat(string path, TimeSpan timeout, string urlPart, params object[] parts)
         {
             var url = CreateUrl(string.Format(urlPart, parts));
-
-            if (downloadHandler == null)
+            using (var client = CreateHttpClient("application/octet-stream"))
             {
-                throw new ArgumentException("A download handler must be specfied.");
-            }
-
-            string tempFileName = Path.GetRandomFileName();
-
-            try
-            {
-                using (var client = CreateHttpClient("application/json"))
+                if (timeout != default(TimeSpan))
+                    client.Timeout = timeout;
+                using (var fs = File.Create(path))
                 {
                     var stream = await client.GetStreamAsync(url);
-
-                    using (var fileStream = File.Create(tempFileName))
-                    {
-                        stream.Seek(0, SeekOrigin.Begin);
-                        await stream.CopyToAsync(fileStream);
-                        fileStream.Close();
-                    }
+                    await stream.CopyToAsync(fs);
                 }
-                downloadHandler.Invoke(tempFileName);
-            }
-            finally
-            {
-                if (File.Exists(tempFileName))
-                {
-                    File.Delete(tempFileName);
-                }
+                return true;
             }
         }
 
