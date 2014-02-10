@@ -5,6 +5,7 @@ using System.Net;
 using NUnit.Framework;
 using TeamCitySharp.DomainEntities;
 using System.Net.Http;
+using System.Security.Authentication;
 
 namespace TeamCitySharp.IntegrationTests
 {
@@ -39,11 +40,11 @@ namespace TeamCitySharp.IntegrationTests
         }
 
         [Test]
-        public void it_throws_exception_when_no_client_connection_made()
+        public void it_throws_authentication_exception_when_no_client_connection_made()
         {
             var client = new TeamCityClient("teamcity.codebetter.com");
 
-            Assert.That(async () => await client.Agents.All(), Throws.Exception.TypeOf<HttpRequestException>());
+            Assert.That(async () => await client.Agents.All(), Throws.Exception.TypeOf<AuthenticationException>());
         }
 
         [Test]

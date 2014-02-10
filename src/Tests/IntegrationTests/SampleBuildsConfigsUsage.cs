@@ -4,6 +4,7 @@ using System.Net;
 using NUnit.Framework;
 using TeamCitySharp.Locators;
 using System.Net.Http;
+using System.Security.Authentication;
 
 namespace TeamCitySharp.IntegrationTests
 {
@@ -38,11 +39,11 @@ namespace TeamCitySharp.IntegrationTests
         }
 
         [Test]
-        public void it_throws_exception_when_no_connection_formed()
+        public void it_throws_authentication_exception_when_no_connection_formed()
         {
             var client = new TeamCityClient("teamcity.codebetter.com");
 
-            Assert.That(async () => await client.BuildConfigs.All(), Throws.Exception.TypeOf<HttpRequestException>());
+            Assert.That(async () => await client.BuildConfigs.All(), Throws.Exception.TypeOf<AuthenticationException>());
         }
 
         [Test]
@@ -63,6 +64,7 @@ namespace TeamCitySharp.IntegrationTests
         }
 
         [Test]
+        [Ignore("No permissions")]
         public void it_pauses_configuration()
         {
             string buildConfigId = "bt437";
@@ -73,6 +75,7 @@ namespace TeamCitySharp.IntegrationTests
         }
 
         [Test]
+        [Ignore("No permissions")]
         public void it_unpauses_configuration()
         {
             string buildConfigId = "bt437";
